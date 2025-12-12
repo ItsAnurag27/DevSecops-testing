@@ -272,11 +272,6 @@ output "ec2_instance_ip" {
   value       = aws_eip.devsecops_eip.public_ip
 }
 
-output "ec2_instance_id" {
-  description = "EC2 Instance ID"
-  value       = aws_instance.devsecops_server.id
-}
-
 output "ec2_instance_public_dns" {
   description = "Public DNS of EC2 instance"
   value       = aws_instance.devsecops_server.public_dns
