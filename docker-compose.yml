@@ -1,0 +1,99 @@
+version: "3.8"
+services:
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    networks:
+      - network-backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001/api
+  
+  api:
+    build: ./backend
+    depends_on:
+      - mongo
+    ports:
+      - "3001:3001"
+    networks: 
+     - network-backend
+    environment:
+      - MONGODB_USER=username
+      - MONGODB_PASSWORD=password
+  
+  mongo:
+    image: mongo
+    restart: always
+    volumes: 
+      - mongodb_data:/data/db
+    environment: 
+      MONGODB_INITDB_ROOT_USERNAME: username
+      MONGODB_INITDB_ROOT_PASSWORD: password
+    networks: 
+     - network-backend
+
+  # SonarQube for code quality analysis
+  sonarqube:
+    image: sonarqube:latest
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonardb:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLED=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - network-backend
+    depends_on:
+      - sonardb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL database for SonarQube
+  sonardb:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_DB=sonar
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - sonardb_data:/var/lib/postgresql/data
+    networks:
+      - network-backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OWASP ZAP for web application security scanning
+  owasp-zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    ports:
+      - "8082:8080"
+    networks:
+      - network-backend
+    volumes:
+      - ./security/owasp-reports:/root/reports
+    environment:
+      - ZAP_OPTS=-config network.connection.timeout=30000
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.disablekey=true
+
+networks:
+  network-backend:
+
+volumes: 
+  mongodb_data:
+  sonarqube_data:
+  sonarqube_logs:
+  sonarqube_extensions:
+  sonardb_data:

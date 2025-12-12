@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP ZAP Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            transition: background 0.3s;
+        }
+        
+        .status-dot.active {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .info-box {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            margin: 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .info-box code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d73a49;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .output.success {
+            border-left: 4px solid #4caf50;
+        }
+        
+        .output.error {
+            border-left: 4px solid #f44336;
+            color: #ff6b6b;
+        }
+        
+        .feature-list {
+            list-style: none;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            color: #666;
+            display: flex;
+            align-items: center;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            color: #4caf50;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .link-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .link-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .link-card:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+        
+        .link-card a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .link-card a:hover {
+            text-decoration: underline;
+        }
+        
+        .link-card small {
+            color: #999;
+            display: block;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🛡️ OWASP ZAP Control Panel
+        </h1>
+        
+        <div class="status">
+            <span class="status-dot active" id="statusDot"></span>
+            <span id="statusText">Checking ZAP status...</span>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📋 Quick Status</div>
+            <div class="info-box">
+                <p><strong>ZAP Version:</strong> <span id="version">Loading...</span></p>
+                <p><strong>Proxy Address:</strong> <code>127.0.0.1:8082</code></p>
+                <p><strong>API Endpoint:</strong> <code>http://localhost:8082/json/core/view/version</code></p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🔧 Proxy Configuration</div>
+            <div class="info-box">
+                <p><strong>Use ZAP as a security proxy:</strong></p>
+                <p style="margin-top: 10px; font-size: 12px;">
+                    Configure your browser or application proxy settings to:<br>
+                    <code>127.0.0.1:8082</code><br><br>
+                    All HTTP/HTTPS traffic through this proxy will be intercepted and analyzed for security vulnerabilities.
+                </p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📊 Features</div>
+            <ul class="feature-list">
+                <li>Real-time traffic interception and analysis</li>
+                <li>Vulnerability scanning and detection</li>
+                <li>Security report generation</li>
+                <li>Manual and automated testing</li>
+                <li>Session management and authentication testing</li>
+                <li>API security scanning</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🔗 Quick Links</div>
+            <div class="link-section">
+                <div class="link-card">
+                    <a href="http://localhost:3000" target="_blank">📱 Frontend App</a>
+                    <small>React application on port 3000</small>
+                </div>
+                <div class="link-card">
+                    <a href="http://localhost:3001" target="_blank">⚙️ Backend API</a>
+                    <small>Node.js API on port 3001</small>
+                </div>
+                <div class="link-card">
+                    <a href="http://localhost:9000" target="_blank">📈 SonarQube</a>
+                    <small>Code quality analysis</small>
+                </div>
+                <div class="link-card">
+                    <a href="http://localhost:8080" target="_blank">🔨 Jenkins</a>
+                    <small>CI/CD pipeline</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">⚡ Test Proxy</div>
+            <div class="button-group">
+                <button class="btn-primary" onclick="testConnection()">Test ZAP Connection</button>
+                <button class="btn-secondary" onclick="clearOutput()">Clear Output</button>
+            </div>
+            <div class="output" id="output"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Check ZAP status on page load
+        window.addEventListener('load', function() {
+            checkZAPStatus();
+            getVersion();
+        });
+        
+        function checkZAPStatus() {
+            const output = document.getElementById('statusText');
+            const dot = document.getElementById('statusDot');
+            
+            fetch('http://127.0.0.1:8082/json/core/view/version')
+                .then(response => {
+                    if (response.ok) {
+                        output.textContent = '✓ OWASP ZAP is running and responsive';
+                        dot.classList.add('active');
+                    } else {
+                        output.textContent = '✗ ZAP is running but returned an error';
+                        dot.classList.remove('active');
+                    }
+                })
+                .catch(error => {
+                    output.textContent = '✗ Cannot reach ZAP proxy - make sure proxy is configured';
+                    dot.classList.remove('active');
+                });
+        }
+        
+        function getVersion() {
+            fetch('http://127.0.0.1:8082/json/core/view/version')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('version').textContent = data.version || 'Unknown';
+                })
+                .catch(error => {
+                    document.getElementById('version').textContent = 'Unable to fetch';
+                });
+        }
+        
+        function testConnection() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Testing connection to ZAP proxy...\n';
+            output.className = 'output';
+            
+            fetch('http://127.0.0.1:8082/json/core/view/version')
+                .then(response => response.json())
+                .then(data => {
+                    output.innerHTML += '✓ Connection successful!\n';
+                    output.innerHTML += '\nZAP Version: ' + data.version + '\n';
+                    output.innerHTML += '\nProxy is ready for use.\n';
+                    output.innerHTML += 'Configure your browser proxy to: 127.0.0.1:8082\n';
+                    output.className = 'output success';
+                })
+                .catch(error => {
+                    output.innerHTML += '✗ Connection failed!\n';
+                    output.innerHTML += '\nError: ' + error.message + '\n';
+                    output.innerHTML += '\nMake sure:\n';
+                    output.innerHTML += '1. OWASP ZAP container is running\n';
+                    output.innerHTML += '2. You have configured your browser proxy to 127.0.0.1:8082\n';
+                    output.innerHTML += '3. Port 8082 is accessible\n';
+                    output.className = 'output error';
+                });
+        }
+        
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
