@@ -63,7 +63,7 @@ pipeline {
                     echo "=== Setting Up EC2 Instance ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
+                            ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << EOF
                                 # Update system
                                 sudo yum update -y
                                 
@@ -71,18 +71,18 @@ pipeline {
                                 sudo yum install -y docker
                                 sudo systemctl start docker
                                 sudo systemctl enable docker
-                                sudo usermod -a -G docker ${EC2_USER}
+                                sudo usermod -a -G docker ec2-user
                                 
                                 # Install Docker Compose
-                                sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                                sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
                                 sudo chmod +x /usr/local/bin/docker-compose
                                 
                                 # Install Git
                                 sudo yum install -y git
                                 
                                 # Create deployment directory
-                                sudo mkdir -p ${EC2_DEPLOY_PATH}
-                                sudo chown ${EC2_USER}:${EC2_USER} ${EC2_DEPLOY_PATH}
+                                sudo mkdir -p /opt/devsecops
+                                sudo chown ec2-user:ec2-user /opt/devsecops
                                 
                                 echo "✓ EC2 Instance prepared successfully"
                             EOF
