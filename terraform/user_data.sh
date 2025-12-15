@@ -50,4 +50,15 @@ cd ${deploy_path}
 git clone ${github_repo} .
 git checkout main
 
+# Start all Docker containers
+echo "Starting Docker containers..."
+cd ${deploy_path}
+docker-compose up -d sonarqube postgres mongo || echo "Some containers may not be available yet"
+
+# Wait for containers to be healthy
+echo "Waiting for containers to start..."
+sleep 10
+
 echo "EC2 initialization completed!"
+echo "Containers status:"
+docker-compose ps
