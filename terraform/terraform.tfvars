@@ -1,5 +1,5 @@
 # AWS Configuration
-aws_region = "eu-north-1"
+aws_region = "us-east-1"
 
 # Project Configuration
 project_name = "devsecops"
@@ -15,7 +15,7 @@ vpc_cidr    = "10.0.0.0/16"
 subnet_cidr = "10.0.1.0/24"
 
 # Key Pair Configuration
-key_pair_name     = "demo"  # Your EC2 key pair name
+key_pair_name     = "jenkins-key"  # Your EC2 key pair name
 private_key_path  = "/tmp/ec2_key.pem"  # GitHub Actions will use this path
 
 # GitHub Configuration
