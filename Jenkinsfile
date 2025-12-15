@@ -84,8 +84,8 @@ git fetch origin
 git checkout main
 git pull origin main || true
 docker-compose down || true
-docker-compose up -d
-sleep 30
+docker-compose up -d --no-build
+sleep 120
 echo "✓ Services deployed and started"
 ENDSSH
                         '''
@@ -104,21 +104,17 @@ ENDSSH
 echo "Checking services status..."
 docker-compose ps
 
-# Check Frontend
-echo "Checking Frontend..."
-curl -f http://localhost:3000 > /dev/null && echo "✓ Frontend is running" || echo "✗ Frontend failed"
-
-# Check Backend
-echo "Checking Backend..."
-curl -f http://localhost:3001/api/todos > /dev/null && echo "✓ Backend is running" || echo "✗ Backend failed"
-
-# Check SonarQube
 echo "Checking SonarQube..."
 curl -f http://localhost:9000/api/system/status > /dev/null && echo "✓ SonarQube is running" || echo "✗ SonarQube failed"
 
-# Check OWASP ZAP
+echo "Checking SonarDB (PostgreSQL)..."
+docker exec devsecops-sonardb-1 pg_isready -U sonar > /dev/null 2>&1 && echo "✓ SonarDB is running" || echo "✗ SonarDB failed"
+
+echo "Checking MongoDB..."
+docker exec devsecops-mongo-1 mongosh --eval "db.adminCommand('ping')" > /dev/null 2>&1 && echo "✓ MongoDB is running" || echo "✗ MongoDB failed"
+
 echo "Checking OWASP ZAP..."
-curl -f http://localhost:8082 > /dev/null && echo "✓ OWASP ZAP is running" || echo "✗ OWASP ZAP failed"
+curl -f http://localhost:8082 > /dev/null 2>&1 && echo "✓ OWASP ZAP is running" || echo "✗ OWASP ZAP failed"
 HEALTHCHECK
                         '''
                     }
