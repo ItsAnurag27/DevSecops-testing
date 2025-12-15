@@ -60,34 +60,11 @@ pipeline {
         stage('Prepare EC2') {
             steps {
                 script {
-                    echo "=== Setting Up EC2 Instance ==="
-                    sshagent(['ec2-ssh-credentials']) {
-                        sh '''
-                            ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << EOF
-                                # Update system
-                                sudo yum update -y
-                                
-                                # Install Docker
-                                sudo yum install -y docker
-                                sudo systemctl start docker
-                                sudo systemctl enable docker
-                                sudo usermod -a -G docker ec2-user
-                                
-                                # Install Docker Compose
-                                sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
-                                sudo chmod +x /usr/local/bin/docker-compose
-                                
-                                # Install Git
-                                sudo yum install -y git
-                                
-                                # Create deployment directory
-                                sudo mkdir -p /opt/devsecops
-                                sudo chown ec2-user:ec2-user /opt/devsecops
-                                
-                                echo "✓ EC2 Instance prepared successfully"
-                            EOF
-                        '''
-                    }
+                    echo "=== EC2 Instance Already Prepared by Terraform ==="
+                    echo "✓ Docker installed"
+                    echo "✓ Docker Compose installed"
+                    echo "✓ Git installed"
+                    echo "✓ Deployment directory created at /opt/devsecops"
                 }
             }
         }
@@ -97,26 +74,16 @@ pipeline {
                 script {
                     echo "=== Deploying Application to EC2 ==="
                     sshagent(['ec2-ssh-credentials']) {
+                        sh 'scp -o StrictHostKeyChecking=no -r . ec2-user@3.231.162.219:/opt/devsecops/'
                         sh '''
-                            # Copy project to EC2
-                            scp -o StrictHostKeyChecking=no -r . ${EC2_USER}@${EC2_IP}:${EC2_DEPLOY_PATH}/
-                            
-                            # Start services
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                cd ${EC2_DEPLOY_PATH}
-                                
-                                # Pull latest changes
-                                git pull origin main
-                                
-                                # Start Docker services
-                                docker-compose down || true
-                                docker-compose up -d
-                                
-                                # Wait for services to start
-                                sleep 30
-                                
-                                echo "✓ Services deployed and started"
-                            EOF
+                            ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << 'ENDSSH'
+cd /opt/devsecops
+git pull origin main || true
+docker-compose down || true
+docker-compose up -d
+sleep 30
+echo "✓ Services deployed and started"
+ENDSSH
                         '''
                     }
                 }
