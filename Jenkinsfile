@@ -132,16 +132,25 @@ HEALTHCHECK
                     echo "=== Running SonarQube Analysis ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'SONARQUBE'
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << SONARQUBE
 cd /opt/devsecops
-export SONAR_HOST_URL="http://localhost:9000"
-export SONAR_TOKEN="${SONAR_TOKEN}"
 
-# Run Docker SonarQube Scanner with environment variables
+# Create sonar-project.properties if not exists
+if [ ! -f sonar-project.properties ]; then
+    cat > sonar-project.properties << 'EOF'
+sonar.projectKey=DevSecops-testing
+sonar.projectName=DevSecops-testing
+sonar.sources=.
+sonar.exclusions=node_modules/**,build/**,.git/**,*.test.js
+EOF
+fi
+
+# Run Docker SonarQube Scanner
 docker run --rm \
+  --network host \
   -e SONAR_HOST_URL="http://localhost:9000" \
   -e SONAR_TOKEN="${SONAR_TOKEN}" \
-  -v $(pwd):/usr/src \
+  -v \$(pwd):/usr/src \
   sonarsource/sonar-scanner-cli || echo "⚠ SonarQube analysis encountered issues but continuing..."
 
 echo "✓ SonarQube analysis stage completed"
@@ -170,17 +179,33 @@ if ! command -v trivy &> /dev/null; then
     rm /tmp/trivy.tar.gz
 fi
 
-# Scan Docker images
-echo "Scanning frontend image..."
-trivy image docker-frontend-backend-db-master-web:latest || echo "⚠ Frontend image scan failed"
+# Scan Dockerfiles (prioritize this - these are what we control)
+echo "=== Scanning Dockerfiles for misconfigurations ==="
+echo "Scanning frontend Dockerfile..."
+trivy config ./frontend/Dockerfile 2>/dev/null || echo "⚠ Frontend Dockerfile scan had issues"
 
-echo "Scanning backend image..."
-trivy image docker-frontend-backend-db-master-api:latest || echo "⚠ Backend image scan failed"
+echo "Scanning backend Dockerfile..."
+trivy config ./backend/Dockerfile 2>/dev/null || echo "⚠ Backend Dockerfile scan had issues"
 
-# Scan Dockerfiles
-echo "Scanning Dockerfiles..."
-trivy config ./frontend/Dockerfile || echo "⚠ Frontend Dockerfile scan failed"
-trivy config ./backend/Dockerfile || echo "⚠ Backend Dockerfile scan failed"
+# Try to scan Docker images if they exist
+echo ""
+echo "=== Scanning Docker images (if available) ==="
+FRONTEND_IMAGE=$(docker images --filter "label=app=frontend" -q 2>/dev/null | head -1)
+BACKEND_IMAGE=$(docker images --filter "label=app=backend" -q 2>/dev/null | head -1)
+
+if [ -n "$FRONTEND_IMAGE" ]; then
+    echo "Scanning frontend image: $FRONTEND_IMAGE"
+    trivy image "$FRONTEND_IMAGE" 2>/dev/null || echo "⚠ Frontend image scan had issues"
+else
+    echo "⚠ No frontend Docker image found (not built)"
+fi
+
+if [ -n "$BACKEND_IMAGE" ]; then
+    echo "Scanning backend image: $BACKEND_IMAGE"
+    trivy image "$BACKEND_IMAGE" 2>/dev/null || echo "⚠ Backend image scan had issues"
+else
+    echo "⚠ No backend Docker image found (not built)"
+fi
 
 echo "✓ Trivy scan completed"
 TRIVY
@@ -223,23 +248,27 @@ ZAP
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
                             ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'REPORT'
-cat > /tmp/deployment-report.txt << 'DEPLOG'
+DEPLOYMENT_DATE=$(date)
+INSTANCE_IP="3.231.162.219"
+PROJECT_NAME="DevSecops-testing"
+
+cat > /tmp/deployment-report.txt << EOF
 ========================================
 DEVSECOPS DEPLOYMENT REPORT
 ========================================
 
-Deployment Date: $(date)
-EC2 Instance IP: 3.231.162.219
-Project: DevSecops-testing
+Deployment Date: ${DEPLOYMENT_DATE}
+EC2 Instance IP: ${INSTANCE_IP}
+Project: ${PROJECT_NAME}
 
 SERVICES STATUS:
-$(docker-compose ps 2>/dev/null || echo "Docker compose not configured")
+$(cd /opt/devsecops && docker-compose ps 2>/dev/null || echo "Docker compose not fully configured")
 
 URLS TO ACCESS:
-- Frontend: http://3.231.162.219:3000
-- Backend API: http://3.231.162.219:3001/api
-- SonarQube: http://3.231.162.219:9000
-- OWASP ZAP: http://3.231.162.219:8082
+- Frontend: http://${INSTANCE_IP}:3000
+- Backend API: http://${INSTANCE_IP}:3001/api
+- SonarQube: http://${INSTANCE_IP}:9000
+- OWASP ZAP: http://${INSTANCE_IP}:8082
 
 SECURITY TOOLS:
 ✓ SonarQube - Code Quality Analysis
@@ -247,14 +276,15 @@ SECURITY TOOLS:
 ✓ OWASP ZAP - Web Application Security Testing
 
 NEXT STEPS:
-1. Access SonarQube at http://3.231.162.219:9000
+1. Access SonarQube at http://${INSTANCE_IP}:9000
 2. Login with admin/admin
 3. Check code analysis results
 4. Review Trivy vulnerability reports
 5. Configure OWASP ZAP for active scanning
 
 ========================================
-DEPLOG
+EOF
+
 cat /tmp/deployment-report.txt
 REPORT
                         '''
