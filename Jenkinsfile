@@ -8,7 +8,7 @@ pipeline {
     }
     
     parameters {
-        string(name: 'EC2_IP', defaultValue: '3.231.162.219', description: 'EC2 Instance IP Address')
+        string(name: 'EC2_IP', defaultValue: '34.200.233.127', description: 'EC2 Instance IP Address')
         string(name: 'EC2_USER', defaultValue: 'ec2-user', description: 'EC2 SSH User')
         string(name: 'GITHUB_REPO', defaultValue: 'https://github.com/ItsAnurag27/DevSecops-testing.git', description: 'GitHub Repository URL')
         string(name: 'SONAR_HOST', defaultValue: 'http://localhost:9000', description: 'SonarQube Host URL')
@@ -16,7 +16,7 @@ pipeline {
     }
     
     environment {
-        EC2_IP = '3.231.162.219'
+        EC2_IP = '34.200.233.127'
         EC2_USER = 'ec2-user'
         PROJECT_NAME = 'DevSecops-testing'
         DOCKER_REGISTRY = 'docker.io'
