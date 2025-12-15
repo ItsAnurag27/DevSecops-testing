@@ -75,7 +75,7 @@ pipeline {
                     echo "=== Deploying Application to EC2 ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << 'ENDSSH'
+                            ssh -o StrictHostKeyChecking=no ec2-user@${EC2_IP} << 'ENDSSH'
 cd /opt/devsecops
 # Fix git directory ownership
 sudo chown -R ec2-user:ec2-user /opt/devsecops
@@ -249,7 +249,7 @@ ZAP
                         sh '''
                             ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'REPORT'
 DEPLOYMENT_DATE=$(date)
-INSTANCE_IP="3.231.162.219"
+INSTANCE_IP="${EC2_IP}"
 PROJECT_NAME="DevSecops-testing"
 
 cat > /tmp/deployment-report.txt << EOF
