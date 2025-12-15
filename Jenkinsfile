@@ -12,7 +12,7 @@ pipeline {
         string(name: 'EC2_USER', defaultValue: 'ec2-user', description: 'EC2 SSH User')
         string(name: 'GITHUB_REPO', defaultValue: 'https://github.com/ItsAnurag27/DevSecops-testing.git', description: 'GitHub Repository URL')
         string(name: 'SONAR_HOST', defaultValue: 'http://localhost:9000', description: 'SonarQube Host URL')
-        string(name: 'SONAR_TOKEN', defaultValue: '', description: 'SonarQube Token', password: true)
+        password(name: 'SONAR_TOKEN', defaultValue: '', description: 'SonarQube Token')
     }
     
     environment {
