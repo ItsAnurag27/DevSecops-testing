@@ -25,6 +25,20 @@ sudo yum install -y git
 # Install curl for health checks
 sudo yum install -y curl
 
+# Install Java (required for Jenkins)
+echo "Installing Java..."
+sudo yum install -y java-17-amazon-corretto-devel
+
+# Install Jenkins
+echo "Installing Jenkins..."
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+sudo yum install -y jenkins
+
+# Start Jenkins
+sudo systemctl start jenkins
+sudo systemctl enable jenkins
+
 # Create deployment directory
 echo "Creating deployment directory..."
 sudo mkdir -p ${deploy_path}
