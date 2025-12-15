@@ -34,7 +34,7 @@ pipeline {
                     if (params.EC2_IP.isEmpty()) {
                         error("EC2_IP parameter is required!")
                     }
-                    if (params.SONAR_TOKEN.isEmpty()) {
+                    if (params.SONAR_TOKEN.toString().isEmpty()) {
                         error("SONAR_TOKEN parameter is required!")
                     }
                     echo "✓ EC2 IP: ${params.EC2_IP}"
