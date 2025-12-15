@@ -259,7 +259,7 @@ resource "null_resource" "devsecops_provisioner" {
     }
   }
 
-  depends_on = [aws_eip.devsecops_eip]
+  depends_on = [aws_instance.devsecops_server]
 }
 
 # Output EC2 instance details
