@@ -25,6 +25,11 @@ sudo yum install -y git
 # Install curl for health checks
 sudo yum install -y curl
 
+# Configure Elasticsearch vm.max_map_count for SonarQube
+echo "Configuring Elasticsearch kernel parameters..."
+sudo sysctl -w vm.max_map_count=262144
+echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
+
 # Install Java (required for Jenkins)
 echo "Installing Java..."
 sudo yum install -y java-17-amazon-corretto-devel
@@ -50,15 +55,21 @@ cd ${deploy_path}
 git clone ${github_repo} .
 git checkout main
 
-# Start all Docker containers
+# Start Docker containers (skip services that need building)
 echo "Starting Docker containers..."
 cd ${deploy_path}
-docker-compose up -d sonarqube postgres mongo || echo "Some containers may not be available yet"
+docker-compose up -d --no-build sonarqube sonardb mongo owasp-zap || echo "Some containers may not be available yet"
 
 # Wait for containers to be healthy
 echo "Waiting for containers to start..."
-sleep 10
+sleep 15
 
 echo "EC2 initialization completed!"
 echo "Containers status:"
 docker-compose ps
+
+echo ""
+echo "Service URLs:"
+echo "  - SonarQube: http://$(hostname -I | awk '{print $1}'):9000"
+echo "  - MongoDB: $(hostname -I | awk '{print $1}'):27017"
+echo "  - OWASP ZAP: http://$(hostname -I | awk '{print $1}'):8082"
