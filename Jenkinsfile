@@ -77,6 +77,7 @@ pipeline {
                         sh '''
                             ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << 'ENDSSH'
 cd /opt/devsecops
+git config --global --add safe.directory /opt/devsecops
 git fetch origin
 git checkout main
 git pull origin main || true
@@ -97,26 +98,26 @@ ENDSSH
                     echo "=== Running Health Checks ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                echo "Checking services status..."
-                                docker-compose ps
-                                
-                                # Check Frontend
-                                echo "Checking Frontend..."
-                                curl -f http://localhost:3000 > /dev/null && echo "✓ Frontend is running" || echo "✗ Frontend failed"
-                                
-                                # Check Backend
-                                echo "Checking Backend..."
-                                curl -f http://localhost:3001/api/todos > /dev/null && echo "✓ Backend is running" || echo "✗ Backend failed"
-                                
-                                # Check SonarQube
-                                echo "Checking SonarQube..."
-                                curl -f http://localhost:9000/api/system/status > /dev/null && echo "✓ SonarQube is running" || echo "✗ SonarQube failed"
-                                
-                                # Check OWASP ZAP
-                                echo "Checking OWASP ZAP..."
-                                curl -f http://localhost:8082 > /dev/null && echo "✓ OWASP ZAP is running" || echo "✗ OWASP ZAP failed"
-                            EOF
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'HEALTHCHECK'
+echo "Checking services status..."
+docker-compose ps
+
+# Check Frontend
+echo "Checking Frontend..."
+curl -f http://localhost:3000 > /dev/null && echo "✓ Frontend is running" || echo "✗ Frontend failed"
+
+# Check Backend
+echo "Checking Backend..."
+curl -f http://localhost:3001/api/todos > /dev/null && echo "✓ Backend is running" || echo "✗ Backend failed"
+
+# Check SonarQube
+echo "Checking SonarQube..."
+curl -f http://localhost:9000/api/system/status > /dev/null && echo "✓ SonarQube is running" || echo "✗ SonarQube failed"
+
+# Check OWASP ZAP
+echo "Checking OWASP ZAP..."
+curl -f http://localhost:8082 > /dev/null && echo "✓ OWASP ZAP is running" || echo "✗ OWASP ZAP failed"
+HEALTHCHECK
                         '''
                     }
                 }
@@ -129,18 +130,18 @@ ENDSSH
                     echo "=== Running SonarQube Analysis ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                cd ${EC2_DEPLOY_PATH}
-                                
-                                # Run Docker SonarQube Scanner
-                                docker run --rm \
-                                  -e SONAR_HOST_URL=${SONAR_HOST} \
-                                  -e SONAR_TOKEN=${SONAR_TOKEN} \
-                                  -v $(pwd):/usr/src \
-                                  sonarsource/sonar-scanner-cli
-                                
-                                echo "✓ SonarQube analysis completed"
-                            EOF
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'SONARQUBE'
+cd ${EC2_DEPLOY_PATH}
+
+# Run Docker SonarQube Scanner
+docker run --rm \
+  -e SONAR_HOST_URL=${SONAR_HOST} \
+  -e SONAR_TOKEN=${SONAR_TOKEN} \
+  -v $(pwd):/usr/src \
+  sonarsource/sonar-scanner-cli
+
+echo "✓ SonarQube analysis completed"
+SONARQUBE
                         '''
                     }
                 }
@@ -153,31 +154,31 @@ ENDSSH
                     echo "=== Running Trivy Vulnerability Scan ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                cd ${EC2_DEPLOY_PATH}
-                                
-                                # Install Trivy if not present
-                                if ! command -v trivy &> /dev/null; then
-                                    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-                                    echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-                                    sudo apt-get update
-                                    sudo apt-get install -y trivy
-                                fi
-                                
-                                # Scan Docker images
-                                echo "Scanning frontend image..."
-                                trivy image docker-frontend-backend-db-master-web:latest || true
-                                
-                                echo "Scanning backend image..."
-                                trivy image docker-frontend-backend-db-master-api:latest || true
-                                
-                                # Scan Dockerfiles
-                                echo "Scanning Dockerfiles..."
-                                trivy config ./frontend/Dockerfile || true
-                                trivy config ./backend/Dockerfile || true
-                                
-                                echo "✓ Trivy scan completed"
-                            EOF
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'TRIVY'
+cd ${EC2_DEPLOY_PATH}
+
+# Install Trivy if not present
+if ! command -v trivy &> /dev/null; then
+    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+    echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+    sudo apt-get update
+    sudo apt-get install -y trivy
+fi
+
+# Scan Docker images
+echo "Scanning frontend image..."
+trivy image docker-frontend-backend-db-master-web:latest || true
+
+echo "Scanning backend image..."
+trivy image docker-frontend-backend-db-master-api:latest || true
+
+# Scan Dockerfiles
+echo "Scanning Dockerfiles..."
+trivy config ./frontend/Dockerfile || true
+trivy config ./backend/Dockerfile || true
+
+echo "✓ Trivy scan completed"
+TRIVY
                         '''
                     }
                 }
@@ -190,21 +191,21 @@ ENDSSH
                     echo "=== Running OWASP ZAP Security Scan ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                # Verify OWASP ZAP is running
-                                curl -s http://localhost:8082 > /dev/null
-                                
-                                if [ $? -eq 0 ]; then
-                                    echo "✓ OWASP ZAP is accessible on port 8082"
-                                    echo "Frontend URL: http://$(hostname -I | awk '{print $1}'):3000"
-                                    echo "Backend API: http://$(hostname -I | awk '{print $1}'):3001/api"
-                                    echo "SonarQube: http://$(hostname -I | awk '{print $1}'):9000"
-                                    echo "OWASP ZAP: http://$(hostname -I | awk '{print $1}'):8082"
-                                else
-                                    echo "✗ OWASP ZAP is not responding"
-                                    exit 1
-                                fi
-                            EOF
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'ZAP'
+# Verify OWASP ZAP is running
+curl -s http://localhost:8082 > /dev/null
+
+if [ $? -eq 0 ]; then
+    echo "✓ OWASP ZAP is accessible on port 8082"
+    echo "Frontend URL: http://$(hostname -I | awk '{print $1}'):3000"
+    echo "Backend API: http://$(hostname -I | awk '{print $1}'):3001/api"
+    echo "SonarQube: http://$(hostname -I | awk '{print $1}'):9000"
+    echo "OWASP ZAP: http://$(hostname -I | awk '{print $1}'):8082"
+else
+    echo "✗ OWASP ZAP is not responding"
+    exit 1
+fi
+ZAP
                         '''
                     }
                 }
@@ -217,8 +218,8 @@ ENDSSH
                     echo "=== Generating Deployment Report ==="
                     sshagent(['ec2-ssh-credentials']) {
                         sh '''
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'EOF'
-                                cat > /tmp/deployment-report.txt << 'REPORT'
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << 'REPORT'
+cat > /tmp/deployment-report.txt << 'DEPLOG'
 ========================================
 DEVSECOPS DEPLOYMENT REPORT
 ========================================
@@ -249,9 +250,9 @@ NEXT STEPS:
 5. Configure OWASP ZAP for active scanning
 
 ========================================
+DEPLOG
+cat /tmp/deployment-report.txt
 REPORT
-                                cat /tmp/deployment-report.txt
-                            EOF
                         '''
                     }
                 }
