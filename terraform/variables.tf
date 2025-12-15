@@ -49,6 +49,7 @@ variable "subnet_cidr" {
 variable "key_pair_name" {
   description = "EC2 Key Pair name"
   type        = string
+  default     = "jenkins-key"
 }
 
 variable "private_key_path" {
