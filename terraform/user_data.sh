@@ -50,7 +50,4 @@ cd ${deploy_path}
 git clone ${github_repo} .
 git checkout main
 
-# Create marker file for provisioner
-touch /tmp/docker_ready
-
 echo "EC2 initialization completed!"

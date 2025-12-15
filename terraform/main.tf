@@ -245,9 +245,9 @@ resource "null_resource" "devsecops_provisioner" {
 
   provisioner "remote-exec" {
     inline = [
-      "echo 'Waiting for EC2 instance to be ready...'",
-      "while [ ! -f /tmp/docker_ready ]; do sleep 5; done",
-      "echo 'EC2 instance is ready!'"
+      "echo 'EC2 instance is ready!'",
+      "docker --version",
+      "git --version"
     ]
 
     connection {
@@ -255,7 +255,7 @@ resource "null_resource" "devsecops_provisioner" {
       user        = "ec2-user"
       private_key = file(var.private_key_path)
       host        = aws_instance.devsecops_server.public_ip
-      timeout     = "2m"
+      timeout     = "5m"
     }
   }
 
