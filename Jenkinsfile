@@ -74,10 +74,11 @@ pipeline {
                 script {
                     echo "=== Deploying Application to EC2 ==="
                     sshagent(['ec2-ssh-credentials']) {
-                        sh 'scp -o StrictHostKeyChecking=no -r . ec2-user@3.231.162.219:/opt/devsecops/'
                         sh '''
                             ssh -o StrictHostKeyChecking=no ec2-user@3.231.162.219 << 'ENDSSH'
 cd /opt/devsecops
+git fetch origin
+git checkout main
 git pull origin main || true
 docker-compose down || true
 docker-compose up -d
