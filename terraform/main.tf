@@ -150,6 +150,15 @@ resource "aws_security_group" "devsecops_sg" {
     description = "SonarQube"
   }
 
+  # Jenkins access
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Jenkins"
+  }
+
   # OWASP ZAP access
   ingress {
     from_port   = 8082
@@ -228,19 +237,6 @@ resource "aws_instance" "devsecops_server" {
   depends_on = [aws_internet_gateway.devsecops_igw]
 }
 
-# Create Elastic IP for stable public IP
-resource "aws_eip" "devsecops_eip" {
-  instance = aws_instance.devsecops_server.id
-  domain   = "vpc"
-
-  tags = {
-    Name        = "${var.project_name}-eip"
-    Environment = var.environment
-  }
-
-  depends_on = [aws_internet_gateway.devsecops_igw]
-}
-
 # Null resource to execute remote commands after instance is ready
 resource "null_resource" "devsecops_provisioner" {
   triggers = {
@@ -258,7 +254,7 @@ resource "null_resource" "devsecops_provisioner" {
       type        = "ssh"
       user        = "ec2-user"
       private_key = file(var.private_key_path)
-      host        = aws_eip.devsecops_eip.public_ip
+      host        = aws_instance.devsecops_server.public_ip
       timeout     = "2m"
     }
   }
@@ -269,7 +265,7 @@ resource "null_resource" "devsecops_provisioner" {
 # Output EC2 instance details
 output "ec2_instance_ip" {
   description = "Public IP of EC2 instance"
-  value       = aws_eip.devsecops_eip.public_ip
+  value       = aws_instance.devsecops_server.public_ip
 }
 
 output "ec2_instance_public_dns" {
@@ -285,9 +281,9 @@ output "ec2_security_group_id" {
 output "access_urls" {
   description = "URLs to access services"
   value = {
-    frontend  = "http://${aws_eip.devsecops_eip.public_ip}:3000"
-    backend   = "http://${aws_eip.devsecops_eip.public_ip}:3001/api"
-    sonarqube = "http://${aws_eip.devsecops_eip.public_ip}:9000"
-    owasp_zap = "http://${aws_eip.devsecops_eip.public_ip}:8082"
+    frontend  = "http://${aws_instance.devsecops_server.public_ip}:3000"
+    backend   = "http://${aws_instance.devsecops_server.public_ip}:3001/api"
+    sonarqube = "http://${aws_instance.devsecops_server.public_ip}:9000"
+    owasp_zap = "http://${aws_instance.devsecops_server.public_ip}:8082"
   }
 }
