@@ -6,7 +6,7 @@ project_name = "devsecops"
 environment  = "production"
 
 # EC2 Configuration
-instance_type    = "t2.micro"
+instance_type    = "c7i-flex.large"
 root_volume_size = 30
 root_volume_type = "gp3"
 
